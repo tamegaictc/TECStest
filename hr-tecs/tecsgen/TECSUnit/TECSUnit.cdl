@@ -1,24 +1,48 @@
 import( <cygwin_kernel.cdl> );
+
 import( <TECSInfo.cdl> );
-/*import( <TECSInfoAccessor.cdl> );*/
+
+import( <TECSInfoAccessor.cdl> );
+
 /* ターゲットのインクルード */
 import( <target.cdl> );
 
 import( <jsmn.cdl> );
 
 signature sTECSUnit {
-  void main( [in,string] const char_t *cell_path,
-             [in,string] const char_t *entry_path,
-             [in,string] const char_t *signature_path,
-             [in,string] const char_t *function_path,
-             [in] const struct tecsunit_obj *arguments,
-             [in] const struct tecsunit_obj *exp_val );
+  void main(    
+                [in,string] const char_t *cell_path,
+                [in,string] const char_t *entry_path,
+                [in,string] const char_t *signature_path,
+                [in,string] const char_t *function_path,
+                [out,string] char_t *result_str, 
+                [in] const struct tecsunit_obj *arguments,
+                [in] const struct tecsunit_obj *exp_val
+                );
+  void boundary_value_test(
+                [in,string] const char_t *cell_path,
+                [in,string] const char_t * entry_path,
+                [in,string] const char_t *signature_path,
+                [in,string] const char_t *function_path,
+                [in] const int *boundary,
+                [in] const struct tecsunit_obj *exp_val 
+                );
+  void equivalence_partitioning_test(
+                [in,string] const char_t *cell_path,
+                [in,string] const char_t * entry_path,
+                [in,string] const char_t *signature_path,
+                [in,string] const char_t *function_path,
+                [in] const int *EP_boundary,
+                [in] const struct tecsunit_obj *exp_val 
+                );
 };
 
 import( <tTaskMain.cdl> );
 
 generate( TECSUnitPlugin, rTEMP::TaskMain, "" );
+/* この一文が無いと、tTECSUnitのセルタイプ記述が存在しなくなる */
 generate( JSMNPlugin, rTEMP::TaskMain, "" );
+/* rTEMP::TaskMainをTaskにしても問題なくビルドを行うことができた、なぜ？ */
 
 region rTEMP{
 

@@ -14,4 +14,12 @@ signature sJSMN{
     [out] int *arg_num,
     [in] int target_num,
     [in] int btr );
+  ER json_parse_boundary(
+    [inout,size_is(btr)] int *boundary,
+    [in] int target_num,
+    [in] int btr );
+  ER json_parse_EP_boundary(
+    [inout,size_is(btr)] int *EP_boundary,
+    [in] int target_num,
+    [in] int btr );
 };

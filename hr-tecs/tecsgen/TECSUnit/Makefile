@@ -11,6 +11,8 @@
 # 変数 #_MVAR_#
 # fixed variable (unchangeable by config or plugin)
 TARGET_BASE = TECSUnit
+TEST_OBJ = tSample_tecsgen.c tSimple_tecsgen.c tTample_tecsgen.c
+TEST_TARGET =
 BASE_DIR = .
 GEN_DIR = $(BASE_DIR)/gen
 JSMN_DIR = $(BASE_DIR)/jsmn
@@ -24,7 +26,7 @@ TECS_UNIT_RUBY = ruby_lib
 CC = gcc
 
 #default C Compiler options
-CFLAGS = $(INCLUDES) $(DEFINES) -D  "Inline=static inline"
+CFLAGS = $(INCLUDES) $(DEFINES) -D "Inline=static inline"
 
 #default Liknker
 LD = gcc
@@ -80,19 +82,25 @@ $(OTHER_OBJS): $(JSMN_DIR)/jsmn.o
 	ar rc $@ $^
 
 jsmn.o: $(JSMN_DIR)/jsmn.c $(JSMN_DIR)/jsmn.h
-	$(CC) -coverage  -c $(CFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 clean :
 	rm -f $(CELLTYPE_COBJS) $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(OTHER_OBJS) $(TARGET)  $(TIMESTAMP)
 	rm -rf $(GEN_DIR)
+	rm -f $(BASE_DIR)/*.gcov
 
 tecs : $(PRE_TECSGEN_TARGET) $(TIMESTAMP) $(POST_TECSGEN_TARGET)
 
 $(TIMESTAMP) : $(TECS_IMPORTS)
 	$(TECSGEN) -I ../test/cygwin -I $(BASE_DIR)/target/ TECSUnit.cdl
+
+$(_TECS_OBJ_DIR)%.o : $(SRC_DIR)/%.c
+	$(CC) -c $(CFLAGS) -coverage -o $@ $<
+
 # generic target for objs
 $(_TECS_OBJ_DIR)%.o : %.c
-	$(CC) -coverage  -c $(CFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) -o $@ $<
+
 
 # $(_TECS_OBJ_DIR)tTask.o : tTask.c
 # 	$(CC) -c $(CFLAGS) -o $@ $<

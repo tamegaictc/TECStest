@@ -570,7 +570,7 @@ class Decl < BDNode
     @global_name
   end
 
-  def set_type( type )
+  def set_type( type ) # DeclクラスのtypeがnilならDeclクラスのtypeに引数であるtypeを代入する
     unless @type then
       @type = type
     else

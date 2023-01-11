@@ -23,7 +23,7 @@ eBody_main(CELLIDX idx)
 	cCall_sayHello( N_HELLO );
 
 	printf( "Simple: How are you?\n" );
-	cCall_howAreYou( buf, sizeof buf );
+	cCall_howAreYou( buf, sizeof(buf) );
 
 	puts( buf );
 }

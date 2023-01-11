@@ -1,44 +1,6 @@
-# -*- coding: utf-8 -*-
-#
-#  TECS Generator
-#      Generator for TOPPERS Embedded Component System
-#
-#   Copyright (C) 2008-2017 by TOPPERS Project
-#--
-#   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
-#   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
-#   変・再配布（以下，利用と呼ぶ）することを無償で許諾する．
-#   (1) 本ソフトウェアをソースコードの形で利用する場合には，上記の著作
-#       権表示，この利用条件および下記の無保証規定が，そのままの形でソー
-#       スコード中に含まれていること．
-#   (2) 本ソフトウェアを，ライブラリ形式など，他のソフトウェア開発に使
-#       用できる形で再配布する場合には，再配布に伴うドキュメント（利用
-#       者マニュアルなど）に，上記の著作権表示，この利用条件および下記
-#       の無保証規定を掲載すること．
-#   (3) 本ソフトウェアを，機器に組み込むなど，他のソフトウェア開発に使
-#       用できない形で再配布する場合には，次のいずれかの条件を満たすこ
-#       と．
-#     (a) 再配布に伴うドキュメント（利用者マニュアルなど）に，上記の著
-#         作権表示，この利用条件および下記の無保証規定を掲載すること．
-#     (b) 再配布の形態を，別に定める方法によって，TOPPERSプロジェクトに
-#         報告すること．
-#   (4) 本ソフトウェアの利用により直接的または間接的に生じるいかなる損
-#       害からも，上記著作権者およびTOPPERSプロジェクトを免責すること．
-#       また，本ソフトウェアのユーザまたはエンドユーザからのいかなる理
-#       由に基づく請求からも，上記著作権者およびTOPPERSプロジェクトを
-#       免責すること．
-#
-#   本ソフトウェアは，無保証で提供されているものである．上記著作権者お
-#   よびTOPPERSプロジェクトは，本ソフトウェアに関して，特定の使用目的
-#   に対する適合性も含めて，いかなる保証も行わない．また，本ソフトウェ
-#   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
-#   の責任を負わない．
-#
-#   $Id: MrubyBridgeCellPlugin.rb 3072 2019-05-02 23:47:42Z okuma-top $
-#++
-
-#== celltype プラグインの共通の親クラス
 class TECSUnitPlugin < CellPlugin
+
+
 
   # プラグイン引数名 => Proc
   # @@cell_list = {}      # gen_cdl_file'ed list to avoid duplicate generation
@@ -148,22 +110,84 @@ EOT
     }
   end
 
-#########################################################################################
-  #===  受け口関数の本体コードを生成（頭部と末尾は別途出力）
-  #ct_name:: Symbol    (プラグインで生成された) セルタイプ名 ．Symbol として送られてくる
+#################################################################################################
+
   def gen_ep_func_body( file, b_singleton, ct_name, global_ct_name, sig_name, ep_name, func_name, func_global_name, func_type, paramSet )
-    # tTECSUnit の受け口関数のセルタイプコード (C言語) を生成する
+
+    @test_case = ""    #テストケースを扱うための変数
+    @boundary_flag = [] #テストケースにboundary_valがあるかを判定
+    @EP_flag = [] #テストケースにEP_boundary_valがあるかを判定
+    test_method_flag = 0 # 1ならBVT、２ならEPT、
+
+    if func_name.to_s == "main" then
+      print_main( file, Namespace.get_root )
+    end
+
+    if func_name.to_s == "boundary_value_test" then
+      test_method_flag = 1
+      parse_json( file, Namespace.get_root, test_method_flag ) #テストケース解析
+      if @boundary_flag.find { |number| number == 1} == 1 then
+        print_boundary_value_test( file, Namespace.get_root )
+      end
+      test_method_flag = 0
+    end
+
+    if func_name.to_s == "equivalence_partitioning_test" then
+      test_method_flag = 2
+      parse_json( file, Namespace.get_root, test_method_flag )
+      if @EP_flag.find { |number| number == 1} == 1 then
+        print_equivalence_partitioning_test( file, Namespace.get_root )
+      end
+      test_method_flag = 0
+    end
+
+  end
+
+  #
+  # target.jsonを読み取り、特定のキーワードを含む一文があるかどうかをチェック
+  #
+
+  def parse_json( file, namespace, flag )
+    require 'json'
+    file = File.open("target.json")
+    @test_case = JSON.load(file)
+
+    # 
+    # 以下のfor文を増やすことで、チェックするキーワードを増やせる
+    # キーワードを増やした場合は、それに伴い追加で配列が必要
+    #
+    
+    if flag == 1 then
+      for target_count in 1..@test_case.length do
+        if @test_case["target"+target_count.to_s].include?("boundary_val") then
+          @boundary_flag[target_count-1] = 1
+        else
+          @boundary_flag[target_count-1] = 0
+        end
+      end
+    elsif flag == 2 then
+      for target_count in 1..@test_case.length do
+        if @test_case["target"+target_count.to_s].include?("EP_boundary_val") then
+          @EP_flag[target_count-1] = 1
+        else
+          @EP_flag[target_count-1] = 0
+        end 
+      end
+    end
+
+  end
+
+  def print_main( file, namespace )
     file.print <<EOT
-  CELLCB  *p_cellcb;
+  CELLCB *p_cellcb;
   if (VALID_IDX(idx)) {
     p_cellcb = GET_CELLCB(idx);
   }
   else {
-    /* エラー処理コードをここに記述します */
+    /* エラー処理をここに記述します */
   } /* end if VALID_IDX(idx) */
-  puts("");
-  printf( "--- TECSUnit ---" );
-  puts("");
+
+  printf("\\n--- TECSUnit ---\\n" );
   void *rawDesc;
 EOT
     # 1.descriptorの記述
@@ -173,6 +197,7 @@ EOT
   sprintf( VAR_cell_entry, "%s.%s", cell_path, entry_path );
   getRawEntryDescriptor( p_cellcb, VAR_cell_entry, &rawDesc, signature_path );
 EOT
+    
     # 2.本体コードの記述
     print_branch_sig( file, Namespace.get_root )
   end
@@ -263,7 +288,7 @@ EOT
     }
   end
 
-  def print_branch_func( file, signature )
+  def print_branch_func( file, signature ) # ここでのsignatureは全てのsigunatureを探索し、正規表現に引っかからなかったもの一つ一つ
     str = ""
     paramSet = ""
     param = ""
@@ -274,7 +299,7 @@ EOT
     double_count = 0
     char_count = 0
 
-    signature.get_function_head_array.each{ |func|
+    signature.get_function_head_array.each{ |func| # itemsに入ってるitemを一つ一つfuncとして実行(?)
       paramSet = ""
       exp_val = ""
       # 期待値のパラメータを取得する
@@ -287,8 +312,8 @@ EOT
       end
       # 関数の引数パラメータを取得する
       int_count, double_count, char_count = 0,0,0
-      n = func.get_paramlist.get_items.length
-      func.get_paramlist.get_items.each_with_index { |paramDecl, idx|
+      n = func.get_paramlist.get_items.length #lengthは配列のサイズを返す
+      func.get_paramlist.get_items.each_with_index { |paramDecl, idx| # idxには0,1,2,と処理の回数ごとに大きくなる値が入る
         param = paramDecl.get_type.get_type_str
       # TODO:ここから
         if param.include?("*") && !param.include?("const") then # paramが[out]指定子付きと判断
@@ -332,14 +357,12 @@ EOT
     if flag then
       file.print <<EOT
       if( !strcmp( function_path, "#{f_name}" ) ){
-        printf("Call #{f_name}");
-        puts("");
+        printf("Call #{f_name}\\n");
 EOT
     else
       file.print <<EOT
       else if( !strcmp( function_path, "#{f_name}" ) ){
-        printf("Call #{f_name}");
-        puts("");
+        printf("Call #{f_name}\\n");
 EOT
     end
 
@@ -358,14 +381,16 @@ EOT
       file.print <<EOT
         if( #{exp_val} == c#{signature.get_name[1..-1]}_#{f_name}( #{paramSet} ) ){
 /*            return 0; */
-            puts("");
-            printf("Result：OK");
-            puts("");
+            printf("\\nResult：OK\\n");
+            printf("[ Expected result ]\\n");
+            strcat(result_str, "| Arg Test | #{signature.get_name[1..-1]}_#{f_name} | **passed ✓** |\\n");
+            puts(result_str);
         }else{
 /*            return -1; */
-            puts("");
-            printf("Result：NG");
-            puts("");
+            printf("\\nResult：NG\\n");
+            printf("[ Unexpected result ]\\n");
+            strcat(result_str, "| Arg Test | #{signature.get_name[1..-1]}_#{f_name} | **failed X** |\\n");
+            puts(result_str);
         }
 EOT
     end
@@ -457,5 +482,488 @@ ER getRawEntryDescriptor( CELLCB *p_cellcb, char_t *entry_path, void **rawEntryD
 EOT
 
   end
-end
 
+  def print_boundary_value_test( file, namespace )
+    file.print <<EOT
+  CELLCB *p_cellcb;
+  if (VALID_IDX(idx)) {
+    p_cellcb = GET_CELLCB(idx);
+  }
+  else {
+    /* エラー処理をここに記述します */
+  } /* end if VALID_IDX(idx) */
+
+  int i;
+  int count = 0;
+  int result_count[6] = { 0, 0, 0, 0, 0, 0 };
+  int expect_result[6] = { 0, 1, 1, 1, 1, 0 };
+  printf("\\n--- Boundary Value Test ---\\n\\n");
+  for( i = 0; i < 2; i++ ){
+    printf("boundary%d = %d\\n", i+1, boundary[i]);
+  }
+  void *rawDesc;
+EOT
+    print_desc( file, Namespace.get_root )
+
+    file.print <<EOT
+  sprintf( VAR_cell_entry, "%s.%s", cell_path, entry_path );
+  getRawEntryDescriptor( p_cellcb, VAR_cell_entry, &rawDesc, signature_path );
+EOT
+    print_BVT_branch_sig( file, Namespace.get_root )
+  end
+
+  def print_BVT_branch_sig( file, namespace )
+    flag = true
+    namespace.travers_all_signature{ |sig|
+      if  sig.get_namespace_path.to_s =~ /nTECSInfo::/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Task.*/ || \
+          sig.get_namespace_path.to_s =~ /::sAccessor/ || \
+          sig.get_namespace_path.to_s =~ /::sTECSUnit/ || \
+          sig.get_namespace_path.to_s =~ /::sJSMN/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Kernel/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Semaphore/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Eventflag/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Dataqueue/ || \
+          sig.get_namespace_path.to_s =~ /::sInitialize.*/ || \
+          sig.get_namespace_path.to_s =~ /::s.*VM/ || \
+          sig.get_namespace_path.to_s =~ /::sMain/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Alarm/ || \
+          sig.get_namespace_path.to_s =~ /::sFixedSizeMemoryPool/ || \
+          sig.get_namespace_path.to_s =~ /::sMessageBuffer/ || \
+          sig.get_namespace_path.to_s =~ /::sTerminateRoutineBody/ || \
+          sig.get_namespace_path.to_s =~ /::s.*HandlerBody/ || \
+          sig.get_namespace_path.to_s =~ /::sConfigInterrupt/ || \
+          sig.get_namespace_path.to_s =~ /::sCyclic/ || \
+          sig.get_namespace_path.to_s =~ /::sMalloc/ then
+      else
+
+        sig.get_function_head_array.each{ |func|
+          for i in 1..@test_case.length do
+            if func.get_name.to_s == @test_case["target"+i.to_s]["function"] then
+              signature_checker = 1
+              break
+            end
+          end
+
+          if signature_checker == 1 then
+            if flag then
+              flag = false
+              file.print <<EOT
+  if( !strcmp(signature_path, "#{sig.get_name}" ) ){
+    setRawEntryDescriptor( #{sig.get_name[1..-1]}Desc, #{sig.get_name}, rawDesc );
+    c#{sig.get_name[1..-1]}_set_descriptor( #{sig.get_name[1..-1]}Desc );
+EOT
+              print_BVT_branch_func( file, sig )
+              file.print <<EOT
+  }
+EOT
+            else
+              file.print <<EOT
+  else if( !strcmp(signature_path, "#{sig.get_name}") ){
+    setRawEntryDescriptor( #{sig.get_name[1..-1]}Desc, #{sig.get_name}, rawDesc );
+    c#{sig.get_name[1..-1]}_set_descriptor( #{sig.get_name[1..-1]}Desc );
+EOT
+              print_BVT_branch_func( file, sig )
+              file.print <<EOT
+  }
+EOT
+            end
+            signature_checker = 0
+            break
+          end
+        }
+      end
+      }
+  end
+
+  def print_BVT_branch_func( file, signature ) #signatureの数だけ呼び出される
+    str = ""
+    paramSet = ""
+    param = ""
+    exp_val = ""
+    flag = true # 初回のみtrue、以降はelse ifを使いたい
+    # out引数のカウント
+    int_count = 0
+    double_count = 0
+    char_count = 0
+
+    signature.get_function_head_array.each{ |func|
+      paramSet = ""
+      exp_val = ""
+      # 期待値のパラメータを取得する
+
+      for target_function in 1..@test_case.length do
+        if func.get_name.to_s == @test_case["target"+target_function.to_s]["function"] && @boundary_flag[target_function-1] == 1 then
+
+          if func.get_return_type.get_type_str.include?("void") then
+            exp_val = ""
+          elsif func.get_return_type.get_type_str.include?("double") || func.get_return_type.get_type_str.include?("float") then
+            exp_val = "exp_val->" + "data.mem_#{func.get_return_type.get_type_str.sub(/\*/, '_buf').sub('const ', '').sub('struct ', '').sub('32_t', '').sub('64_t', '')}"
+          else
+            exp_val = "exp_val->" + "data.mem_#{func.get_return_type.get_type_str.sub(/\*/, '_buf').sub('const ', '').sub('struct ', '')}"
+          end
+
+          int_count, double_count, char_count = 0, 0, 0
+          n = func.get_paramlist.get_items.length
+          func.get_paramlist.get_items.each_with_index { |paramDecl, idx|
+            param = paramDecl.get_type.get_type_str # paramにはテストする関数の引数の型が入っている (例：int32_tなど)
+            if param.include?("*") && !param.include?("const") then # paramが[out]指定子付きと判断
+              if param.include?("int") || param.include?("INT") || param.include?("short") ||\
+                 param.include?("SHORT") || param.include?("long") || param.include?("LONG") then
+                paramSet.concat("(int *) ( VAR_data + sizeof(int)*#{int_count} + sizeof(double)*#{double_count} + sizeof(char)*#{char_count} )")
+                int_count += 1
+              elsif param.include?("double") || param.include?("float") then
+                paramSet.concat("(double *) ( VAR_data + sizeof(int)*#{int_count} + sizeof(double)*#{double_count} + sizeof(char)*#{char_count} )")
+                double_count += 1
+              elsif param.include?("char") || param.include?("CHAR") then
+                paramSet.concat("(char *) ( VAR_data + sizeof(int)*#{int_count} + sizeof(double)*#{double_count} + sizeof(char)*#{char_count} )")
+                char_count += 1
+              end
+            # ここまで
+            else #[in]指定子の場合
+              if param.include?("struct") then
+                paramSet.concat("&arguments[#{idx}].data.mem_#{param.sub(/\*/, '_buf').sub('const ', '').sub('struct ', '')}")
+              else
+                if param.include?("double") || param.include?("float") then
+                  paramSet.concat("boundary[test_count] + boundary_count") # ここを編集した
+                elsif param.include?("char") || param.include?("CHAR") then
+                  paramSet.concat("arguments[#{idx}].data.mem_#{param.sub(/\*/, '_buf').sub('const ', '').sub('_t', '')}")
+                else
+#                 paramSet.concat("arguments[#{idx}].data.mem_#{param.sub(/\*/, '_buf').sub('const ', '')}")
+                  paramSet.concat("boundary[test_count] + boundary_count") # ここを編集した
+                end
+              end
+            end
+            if idx + 1 < n then
+              paramSet.concat(", ")
+            end
+          }
+          print_BVT_call_desc( file, func.get_name.to_s, exp_val, signature, paramSet, int_count, double_count, char_count, flag )
+          flag = false
+        end
+      end
+    }
+  end
+
+  def print_BVT_call_desc( file, f_name, exp_val, signature, paramSet, int_count, double_count, char_count, flag )
+
+    if flag then
+      file.print <<EOT
+      if( !strcmp( function_path, "#{f_name}") ){
+        printf("\\nCall #{f_name}\\n");
+EOT
+    else
+      file.print <<EOT
+      else if( !strcmp( function_path, "#{f_name}") ){
+        printf("\\nCall #{f_name}\\n");
+EOT
+    end
+
+    if int_count + double_count + char_count > 0 then
+      file.print <<EOT
+        VAR_data = malloc( sizeof(int)*#{int_count} + sizeof(double)*#{double_count} + sizeof(char)*#{char_count} );
+EOT
+    end
+
+    if exp_val == "" then
+      file.print <<EOT
+        c#{signature.get_name[1..-1]}_#{f_name}(  )}; /* この最後の括弧の中でテストする関数の引数を設定している */
+        return 0;
+EOT
+    else
+      file.print <<EOT
+        for( int test_count = 0; test_count < 2; test_count++ ){
+          for( int boundary_count = -1; boundary_count < 2; boundary_count++ ){
+            printf("\\n[input  : %d]\\n", boundary[test_count] + boundary_count);
+          /*  if( #{exp_val} == c#{signature.get_name[1..-1]}_#{f_name}( boundary[test_count] + boundary_count ) ){ */
+            if( #{exp_val} == c#{signature.get_name[1..-1]}_#{f_name}( #{paramSet} ) ){
+              printf("[Result : OK]\\n");
+              result_count[count] = 1;
+            }else{
+              printf("[Result : NG]\\n");
+              result_count[count] = 0;
+            }
+            count += 1;
+          }
+        }
+        for( count = 0; count < 6; count++ ){
+          if( result_count[count] == expect_result[count] ){
+            if ( count == 5 ){
+              printf("[ Expected result ]\\n");
+            }
+          } else {
+            printf("[ Unexpected result ]\\n");
+            break;
+          }
+        }
+EOT
+    end
+
+    if int_count + double_count + char_count > 0 then
+      file.print <<EOT
+        free( VAR_data );
+EOT
+    end
+    out_check( file, int_count, double_count, char_count )
+    file.print <<EOT
+      }
+EOT
+  end
+
+  #
+  # 同値分割テストを行うためのコードを生成
+  #
+
+  def print_equivalence_partitioning_test( file, namespace )
+    file.print <<EOT
+  CELLCB *p_cellcb;
+  if (VALID_IDX(idx)) {
+    p_cellcb = GET_CELLCB(idx);
+  }
+  else {
+    /* エラー処理はここに記述します */
+  } /* end if VALID_IDX(idx) */
+
+  int i, j, k, tmp,  standard_val;
+  int result_count[3] = { 0, 0, 0 };
+  int expect_result[3] = { 0, 1, 0 }; 
+  int EP_num = sizeof EP_boundary / sizeof EP_boundary[0];
+  int EP_boundary_val[EP_num];
+  int typical_val[EP_num+1];
+
+  for( k = 0; k < EP_num; k++ ){
+    EP_boundary_val[k] = EP_boundary[k];
+  }
+
+  if( EP_num != 1 ){ /* 複数の境界値を持てるように昇順にする */
+    for( i = 0; i < EP_num-1; i ++ ){
+      for( j = i+1; j < EP_num; j++ ){
+        if( EP_boundary_val[i] > EP_boundary_val[j] ){
+          tmp = EP_boundary_val[i];
+          EP_boundary_val[i] = EP_boundary_val[j];
+          EP_boundary_val[j] = tmp;
+        }
+      }
+    } /* ここは一旦境界値二つの場合のみで考える */
+    standard_val = ( EP_boundary_val[1] - EP_boundary_val[0] ) / 2;
+    typical_val[0] = EP_boundary_val[0] - standard_val;
+    typical_val[1] = ( EP_boundary_val[0] + EP_boundary_val[1] ) / 2;
+    typical_val[2] = EP_boundary_val[1] + standard_val;
+  } else {
+    typical_val[0] = EP_boundary_val[0] - 50;
+    typical_val[0] = EP_boundary_val[0] + 50;
+  }
+
+  printf("\\n--- Equivalence Partitioning Test ---\\n\\n");
+
+  printf("input = [");
+  for( k = 0; k < EP_num+1; k++ ){
+    printf(" %d", typical_val[k]);
+  }
+  printf(" ]\\n");
+
+  void *rawDesc;
+EOT
+    print_desc( file, Namespace.get_root )
+
+    file.print <<EOT
+  sprintf( VAR_cell_entry, "%s.%s", cell_path, entry_path );
+  getRawEntryDescriptor( p_cellcb, VAR_cell_entry, &rawDesc, signature_path );
+EOT
+    print_EPT_branch_sig( file, Namespace.get_root )
+  end
+
+  def print_EPT_branch_sig( file, namespace )
+    flag = true
+    func = ""
+    signature_checker = 0
+    namespace.travers_all_signature{ |sig|
+      if  sig.get_namespace_path.to_s =~ /nTECSInfo::/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Task.*/ || \
+          sig.get_namespace_path.to_s =~ /::sAccessor/ || \
+          sig.get_namespace_path.to_s =~ /::sTECSUnit/ || \
+          sig.get_namespace_path.to_s =~ /::sJSMN/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Kernel/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Semaphore/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Eventflag/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Dataqueue/ || \
+          sig.get_namespace_path.to_s =~ /::sInitialize.*/ || \
+          sig.get_namespace_path.to_s =~ /::s.*VM/ || \
+          sig.get_namespace_path.to_s =~ /::sMain/ || \
+          sig.get_namespace_path.to_s =~ /::s.*Alarm/ || \
+          sig.get_namespace_path.to_s =~ /::sFixedSizeMemoryPool/ || \
+          sig.get_namespace_path.to_s =~ /::sMessageBuffer/ || \
+          sig.get_namespace_path.to_s =~ /::sTerminateRoutineBody/ || \
+          sig.get_namespace_path.to_s =~ /::s.*HandlerBody/ || \
+          sig.get_namespace_path.to_s =~ /::sConfigInterrupt/ || \
+          sig.get_namespace_path.to_s =~ /::sCyclic/ || \
+          sig.get_namespace_path.to_s =~ /::sMalloc/ then
+      else
+
+        sig.get_function_head_array.each{ |func|
+          for i in 1..@test_case.length do
+            if func.get_name.to_s == @test_case["target"+i.to_s]["function"] then
+              signature_checker = 1
+              break
+            end
+          end
+
+          if signature_checker == 1 then
+            if flag then
+              flag = false
+              file.print <<EOT
+  if( !strcmp(signature_path, "#{sig.get_name}" ) ){
+    setRawEntryDescriptor( #{sig.get_name[1..-1]}Desc, #{sig.get_name}, rawDesc );
+    c#{sig.get_name[1..-1]}_set_descriptor( #{sig.get_name[1..-1]}Desc );
+EOT
+              print_EPT_branch_func( file, sig )
+              file.print <<EOT
+  }
+EOT
+            else
+              file.print <<EOT
+  else if( !strcmp(signature_path, "#{sig.getname}" ) ){
+    setRawEntryDescriptor( #{sig.get_name[1..-1]}Desc, #{sig.get_name}, rawDesc );
+    c#{sig.get_name[1..-1]}_set_descriptor( #{sig.get_name[1..-1]}Desc );
+EOT
+              print_EPT_branch_func( file, sig )
+              file.print <<EOT
+  }
+EOT
+            end
+            signature_checker = 0
+            break
+          end
+        }
+      end
+    }
+  end
+
+  def print_EPT_branch_func( file, signature )
+    str = ""
+    paramSet = ""
+    param = ""
+    exp_val = ""
+    flag = true
+    # out引数のカウント
+    int_count = 0
+    double_count = 0
+    char_count = 0
+
+    signature.get_function_head_array.each{ |func|
+      paramSet = ""
+      exp_val = ""
+
+      for target_function in 1..@test_case.length do
+        if func.get_name.to_s == @test_case["target"+target_function.to_s]["function"] && @EP_flag[target_function-1] == 1 then
+
+          if func.get_return_type.get_type_str.include?("void") then
+            exp_val = ""
+          elsif func.get_return_type.get_type_str.include?("double") || func.get_return_type.get_type_str.include?("float") then
+            exp_val = "exp_val->" + "data.mem_#{func.get_return_type.get_type_str.sub(/\*/, '_buf').sub('const ', '').sub('struct ', '').sub('32_t', '').sub('64_t', '')}"
+          else
+            exp_val = "exp_val->" + "data.mem_#{func.get_return_type.get_type_str.sub(/\*/, '_buf').sub('const ', '').sub('struct ', '')}"
+          end
+
+          int_count, double_count, char_count = 0, 0, 0
+          n = func.get_paramlist.get_items.length
+          func.get_paramlist.get_items.each_with_index { |paramDecl, idx|
+            param = paramDecl.get_type.get_type_str
+            if param.include?("*") && !param.include?("const") then
+              if param.include?("int") || param.include?("INT") || param.include?("short") ||\
+                 param.include?("SHORT") || param.include?("long") || param.include?("LONG") then
+                paramSet.concat("(int *) ( VAR_data + sizeof(int)*#{int_count} + sizeof(double)*#{double_count} + sizeof(char)*#{char_count} )")
+                int_count += 1
+              elsif param.include?("double") || param.include?("float") then
+                paramSet.concat("(double *) ( VAR_data + sizeof(int)*#{int_count} + sizeof(double)*#{double_count} + sizeof(char)*#{char_count} )")
+                double_count += 1
+              elsif param.include?("char") || param.include?("CHAR") then
+                paramSet.concat("(char *) ( VAR_data + sizeof(int)*#{int_count} + sizeof(double)*#{double_count} + sizeof(char)*#{char_count} )")
+                char_count += 1
+              end
+            else
+              if param.include?("struct") then
+                paramSet.concat("&arguments[#{idx}].data.mem_#{param.sub(/\*/, '_buf').sub('const ', '').sub('struct ', '')}")
+              else
+                if param.include?("double") || param.include?("float") then
+                  paramSet.concat("typical_val[test_count]") # ここを編集する必要あり
+                elsif param.include?("char") || param.include?("CHAR") then
+                  paramSet.concat("arguments[#{idx}].data.mem_#{param.sub(/\*/, '_buf').sub('const ', '').sub('_t', '')}")
+                else
+#                 paramSet.concat("arguments[#{idx}].data.mem_#{param.sub(/\*/, '_buf').sub('const ', '')}")
+                  paramSet.concat("typical_val[test_count]") # ここを編集する必要あり
+                end
+              end
+            end
+            if idx + 1 < n then
+              paramSet.concat(", ")
+            end
+          }
+          print_EPT_call_desc( file, func.get_name.to_s, exp_val, signature, paramSet, int_count, double_count, char_count, flag )
+          flag = false
+        end
+      end
+    }
+  end
+
+  def print_EPT_call_desc( file, f_name, exp_val, signature, paramSet, int_count,double_count, char_count, flag )
+    if flag then
+      file.print <<EOT
+      if( !strcmp(function_path, "#{f_name}") ){
+        printf("\\nCall #{f_name}\\n");
+EOT
+    else
+      file.print <<EOT
+      else if( !strcmp( function_path, "#{f_name}") ){
+        printf("\\nCall #{f_name}\\n");
+EOT
+    end
+
+    if int_count + double_count + char_count > 0 then
+      file.print <<EOT
+        VAR_data = malloc( sizeof(int)*#{int_count} + sizeof(double)*#{double_count} + sizeof(char)*#{char_count} );
+EOT
+    end
+
+    if exp_val == "" then
+      file.print <<EOT
+        c#{signature.get_name[1..-1]}_#{f_name}( #{paramSet} )};
+        return 0;
+EOT
+    else
+      file.print <<EOT
+        for( int test_count = 0; test_count < EP_num+1; test_count++ ){
+          printf("\\n[input  : %d]\\n", typical_val[test_count]);
+          if( #{exp_val} == c#{signature.get_name[1..-1]}_#{f_name}( #{paramSet} ) ){
+            printf("[Result : OK]\\n");
+            result_count[test_count] = 1;
+          } else {
+            printf("[Result : NG]\\n");
+            result_count[test_count] = 0;
+          }
+        }
+        for( int test_count = 0; test_count < EP_num+1; test_count++ ){
+          if( result_count[test_count] == expect_result[test_count] ){
+            if( test_count == EP_num ){
+              printf("[ Expected result ]\\n");
+            }
+          } else {
+            printf("[ Unexpected result ]\\n");
+            break;
+          }
+        }
+EOT
+    end
+
+    if int_count + double_count + char_count > 0 then
+      file.print <<EOT
+        free( VAR_data );
+EOT
+    end
+    out_check( file, int_count, double_count, char_count )
+    file.print <<EOT
+      }
+EOT
+  end
+
+end

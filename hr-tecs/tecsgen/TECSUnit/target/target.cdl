@@ -4,9 +4,25 @@ import_C("target_struct.h");
 signature sSample {
   ER sayHello( [in]int32_t times );
   ER howAreYou( [out,string(len)]char_t *buf, [in]int32_t len);
+  ER BoundarySample( [in]int8_t x );
+};
+
+signature sTample {
+  ER Hello( [in]int16_t y );
+};
+
+celltype tTample {
+  entry sTample eHello;
+  attr {
+    int8_t initialstate = 0;
+  };
+  var {
+    int8_t data = initialstate;
+  };
 };
 
 celltype tSample {
+  call sTample cTample;
   entry sSample eEnt;
 };
 
@@ -15,7 +31,11 @@ celltype tSimple {
   entry sTaskBody eBody;
 };
 
+cell tTample Tample {
+};
+
 cell tSample Sample {
+  cTample = Tample.eHello;
 };
 
 cell tSimple Simple {
@@ -31,4 +51,4 @@ cell tSimple Simple {
  *};
  */
 
-/* 中間発表テスト */
+ /* Test*/

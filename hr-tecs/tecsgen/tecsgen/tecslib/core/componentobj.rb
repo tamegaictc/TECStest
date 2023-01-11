@@ -202,7 +202,7 @@ class Signature < NSBDNode  # < Nestable
     @global_name
   end
 
-  def get_function_head_array
+  def get_function_head_array #function_head_listがtrue(or 1?)ならばfunction_head_list.get_itemsを返す(12/16)
     if @function_head_list then
       return @function_head_list.get_items
     else

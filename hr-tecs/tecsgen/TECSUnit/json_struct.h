@@ -4,7 +4,7 @@ struct tecsunit_obj{
 /* 新しい型はここに追加してください */
     ER mem_ER;
     struct target_struct mem_target_struct_buf;
-/* 以下は参照：https://tecs-docs.readthedocs.io/ja/latest/tecs/CDLref_type.html?highlight=%E5%9E%8B */
+/* 以下を参照：https://tecs-docs.readthedocs.io/ja/latest/tecs/CDLref_type.html */
     /* 組込み型：範囲が不明瞭 */
     char    mem_char;
     int     mem_int;
