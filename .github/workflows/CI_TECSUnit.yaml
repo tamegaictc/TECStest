@@ -30,9 +30,14 @@ jobs:
           cd hr-tecs/tecsgen/TECSUnit
           cat test_result.txt >> $GITHUB_STEP_SUMMARY
           
-      - name: coverage
+      - name: gcov
         run: |
           cd hr-tecs/tecsgen/TECSUnit
           gcov gen/*.gcda >> $GITHUB_STEP_SUMMARY
           cat *.gcov
           
+      - name: lcov
+        run: |
+          cd hr-tecs/tecsgen/TECSUnit
+          lcov -d . -c -o coverage_test.info
+          genhtml coverage_test.info -o ./info
