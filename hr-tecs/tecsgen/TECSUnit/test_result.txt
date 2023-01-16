@@ -1,7 +1,0 @@
-
-| test method | target function | result |
-|---|---|---|
-| Arg Test | Sample_BoundarySample | passed |
-|---|---|---|
-| Arg Test | Sample_sayHello | passed |
-|---|---|---|

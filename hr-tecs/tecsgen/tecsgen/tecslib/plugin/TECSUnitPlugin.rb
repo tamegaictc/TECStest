@@ -690,9 +690,13 @@ EOT
           if( result_count[count] == expect_result[count] ){
             if ( count == 5 ){
               printf("[ Expected result ]\\n");
+              strcat(result_str, "| BV Test | #{signature.get_name[1..-1]}_#{f_name} | **passed ✓** |\\n");
+              puts(result_str);
             }
           } else {
             printf("[ Unexpected result ]\\n");
+            strcat(result_str, "| BV Test | #{signature.get_name[1..-1]}_#{f_name} | **failed ✓** |\\n");
+            puts(result_str);
             break;
           }
         }
@@ -946,9 +950,13 @@ EOT
           if( result_count[test_count] == expect_result[test_count] ){
             if( test_count == EP_num ){
               printf("[ Expected result ]\\n");
+              strcat(result_str, "| EP Test | #{signature.get_name[1..-1]}_#{f_name} | **passed ✓** |\\n");
+              puts(result_str);
             }
           } else {
             printf("[ Unexpected result ]\\n");
+            strcat(result_str, "| EP Test | #{signature.get_name[1..-1]}_#{f_name} | **failed ✓** |\\n");
+            puts(result_str);
             break;
           }
         }

@@ -296,13 +296,13 @@ eBody_main(CELLIDX idx)
         ercd2 = cJSMN_json_parse_boundary( &boundary, j, ATTR_NAME_LEN );
         if( ercd2 == -1 ) return;
 
-        cUnit_boundary_value_test( VAR_cell_path, VAR_entry_path, VAR_signature_path, VAR_function_path, boundary, &exp_val );
+        cUnit_boundary_value_test( VAR_cell_path, VAR_entry_path, VAR_signature_path, VAR_function_path, VAR_result_str, boundary, &exp_val );
         printf("\n\n");
 
         ercd3 = cJSMN_json_parse_EP_boundary( &EP_boundary, j, ATTR_NAME_LEN );
         if ( ercd3 == -1 ) return;
 
-        cUnit_equivalence_partitioning_test( VAR_cell_path, VAR_entry_path, VAR_signature_path, VAR_function_path, EP_boundary, &exp_val );
+        cUnit_equivalence_partitioning_test( VAR_cell_path, VAR_entry_path, VAR_signature_path, VAR_function_path, VAR_result_str, EP_boundary, &exp_val );
         printf("\n\n");
 
         if( ercd == 2 ){
