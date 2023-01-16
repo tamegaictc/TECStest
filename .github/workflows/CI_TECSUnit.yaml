@@ -1,12 +1,18 @@
-name: CI_TECSUnit
+name: Makefile CI
 
-on:
-  push:
-    branches:
-      - workspace
+on: [push]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
-  make:
+  build:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -35,9 +41,26 @@ jobs:
           cd hr-tecs/tecsgen/TECSUnit
           gcov gen/*.gcda >> $GITHUB_STEP_SUMMARY
           cat *.gcov
-          
+  
       - name: lcov
         run: |
           cd hr-tecs/tecsgen/TECSUnit
-          lcov -d . -c -o coverage_test.info
-          genhtml coverage_test.info -o ./info
+          sudo apt-get -y install lcov
+          lcov -d . -c --rc lcov_branch_coverage=1 -o coverage_test.info
+          genhtml coverage_test.info --branch-coverage -o ./info
+          
+      - name: upload
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./hr-tecs/tecsgen/TECSUnit/info/
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-20.04
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
