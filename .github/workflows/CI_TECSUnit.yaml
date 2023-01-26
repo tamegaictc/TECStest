@@ -39,7 +39,8 @@ jobs:
       - name: gcov
         run: |
           cd hr-tecs/tecsgen/TECSUnit
-          gcov gen/*.gcda >> $GITHUB_STEP_SUMMARY
+          gcov -f gen/*.gcda >> coverage_results.txt
+          ruby coverage_results.rb >> $GITHUB_STEP_SUMMARY
           cat *.gcov
   
       - name: lcov

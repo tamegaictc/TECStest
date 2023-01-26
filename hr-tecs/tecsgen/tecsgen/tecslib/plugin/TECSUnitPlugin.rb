@@ -384,13 +384,11 @@ EOT
             printf("\\nResult：OK\\n");
             printf("[ Expected result ]\\n");
             strcat(result_str, "| Arg Test | #{signature.get_name[1..-1]}_#{f_name} | **passed ✓** |\\n");
-            puts(result_str);
         }else{
 /*            return -1; */
             printf("\\nResult：NG\\n");
             printf("[ Unexpected result ]\\n");
             strcat(result_str, "| Arg Test | #{signature.get_name[1..-1]}_#{f_name} | **failed X** |\\n");
-            puts(result_str);
         }
 EOT
     end
@@ -691,12 +689,10 @@ EOT
             if ( count == 5 ){
               printf("[ Expected result ]\\n");
               strcat(result_str, "| BV Test | #{signature.get_name[1..-1]}_#{f_name} | **passed ✓** |\\n");
-              puts(result_str);
             }
           } else {
             printf("[ Unexpected result ]\\n");
             strcat(result_str, "| BV Test | #{signature.get_name[1..-1]}_#{f_name} | **failed ✓** |\\n");
-            puts(result_str);
             break;
           }
         }
@@ -951,12 +947,10 @@ EOT
             if( test_count == EP_num ){
               printf("[ Expected result ]\\n");
               strcat(result_str, "| EP Test | #{signature.get_name[1..-1]}_#{f_name} | **passed ✓** |\\n");
-              puts(result_str);
             }
           } else {
             printf("[ Unexpected result ]\\n");
             strcat(result_str, "| EP Test | #{signature.get_name[1..-1]}_#{f_name} | **failed ✓** |\\n");
-            puts(result_str);
             break;
           }
         }

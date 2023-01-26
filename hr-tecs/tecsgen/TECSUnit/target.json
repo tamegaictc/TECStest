@@ -4,8 +4,8 @@
     "entry":"eEnt",
     "function":"BoundarySample",
     "argument":[2], 
-    "boundary_val":[1,99], 
-    "EP_boundary_val":[0,100],
+    "EP_boundary_val":[1,99], 
+    "boundary_val":[0,100],
     "exp_val":0
   },
   "target2":{
